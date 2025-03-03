@@ -36,7 +36,6 @@ from flwr.common import (
     FitIns,
     Context,
 )
-from flwr.common.logger import log
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.strategy import FedAvg
 
@@ -59,11 +58,11 @@ class FedAvgDC(FedAvg):
     Parameters
     ----------
     agg_period : int, optional
-        Aggregation period. When (server_round % agg_period == 0) or on the first round,
+        Aggregation period.
         the server performs a standard FedAvg aggregation and broadcasts the global model.
         Defaults to DEFAULT_AGG_PERIOD.
     daisy_period : int, optional
-        Daisy-chaining period. When (server_round % daisy_period == daisy_period - 1),
+        Daisy-chaining period.
         the server shuffles client assignments and sends client-specific parameters.
         Defaults to DEFAULT_DAISY_PERIOD.
     **kwargs : dict
@@ -138,13 +137,13 @@ class FedAvgDC(FedAvg):
         # In round 1 or when the server_round is divisible by the aggregation period,
         # perform standard FedAvg aggregation.
         if server_round == 1 or (server_round % self.agg_period) == 0:
-            log.info("Aggregation round: broadcasting global parameters to clients")
+            #print("Aggregation round: broadcasting global parameters to clients")
             return super().configure_fit(server_round, parameters, client_manager)
 
         # ----- Daisy-Chaining Round -----
         # When the round satisfies the daisy-chaining condition, shuffle the client assignments.
         if (server_round % self.daisy_period) == (self.daisy_period - 1):
-            log.info("Daisy-chaining round: shuffling client assignments")
+            #print("Daisy-chaining round: shuffling client assignments")
             # Create a shuffled order for assigning model parameters.
             client_indices = list(range(len(clients)))
             random.shuffle(client_indices)
@@ -161,7 +160,7 @@ class FedAvgDC(FedAvg):
 
         # ----- Standard Training Round -----
         # For all other rounds, continue training using the stored parameters.
-        log.info("Standard training round: sending stored client parameters without shuffling")
+        #print("Standard training round: sending stored client parameters without shuffling")
         instructions = []
         for client in clients:
             prev_params = self.last_round_parameters.get(client.cid, parameters)
@@ -203,19 +202,19 @@ class FedAvgDC(FedAvg):
         """
         # ----- Aggregation Round -----
         if (server_round % self.agg_period) == (self.agg_period - 1):
-            log.info("Aggregation round: aggregating client updates to update global model")
+           # print("Aggregation round: aggregating client updates to update global model")
             aggregated_params, metrics_aggregated = super().aggregate_fit(server_round, results, failures)
             self.global_params = aggregated_params
 
             if aggregated_params is not None:
-                log.info("Updating stored parameters for all clients with new global parameters")
+                #print("Updating stored parameters for all clients with new global parameters")
                 for cid in self.all_client_ids:
                     self.last_round_parameters[cid] = aggregated_params
 
             return aggregated_params, metrics_aggregated
 
         # ----- Non-Aggregation Round -----
-        log.info("Non-aggregation round: updating stored parameters for sampled clients")
+        #print("Non-aggregation round: updating stored parameters for sampled clients")
         for client_proxy, fit_res in results:
             self.last_round_parameters[client_proxy.cid] = fit_res.parameters
 
